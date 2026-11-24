@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>POISONY AI</title>
+<style>
+:root{--g:#00ed89;--bg:#050b09;--p:#0c1b15;--line:#24543d;--txt:#dffbea}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px Consolas,monospace}header{display:flex;justify-content:space-between;align-items:center;padding:17px 22px;border-bottom:1px solid var(--line);background:#08150f}header b{color:var(--g);font-size:21px;letter-spacing:2px}#status{color:var(--g)}.layout{display:grid;grid-template-columns:310px minmax(0,1fr);height:calc(100dvh - 66px)}aside{overflow:auto;padding:16px;border-right:1px solid var(--line)}.panel{background:var(--p);border:1px solid var(--line);padding:15px;border-radius:12px;margin-bottom:15px}h3{color:var(--g);font-size:13px;letter-spacing:1px;margin:0 0 13px}.core{  position: relative; height:120px;width:120px;margin:15px auto;border:3px solid var(--g);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 30px #00ed8966;animation:pulse 3s infinite}.core:before{content:'';position:absolute;width:91px;height:91px;border:2px dashed var(--g);border-radius:50%;animation:spin 12s linear infinite}.core span{font-size:28px;font-weight:bold;color:var(--g)}.core.busy{animation:pulse .6s infinite}@keyframes pulse{50%{box-shadow:0 0 60px #00ed8999}}@keyframes spin{to{transform:rotate(360deg)}}label{display:block;color:#a6d4b9;margin:11px 0 5px}input,select,textarea{width:100%;background:#07130e;border:1px solid var(--line);border-radius:7px;color:var(--txt);padding:10px;font:inherit}button{background:#123021;color:var(--g);border:1px solid var(--g);border-radius:7px;padding:10px;cursor:pointer;font:inherit}button:disabled{opacity:.5;cursor:not-allowed}.panel button{width:100%;margin-top:10px}small{color:#a0b9ab;line-height:1.6;display:block;margin-top:7px}main{display:flex;flex-direction:column;min-height:0;min-width:0}#chat{flex:1;overflow:auto;padding:20px}.msg{max-width:900px;margin:0 auto 15px;padding:15px;border:1px solid var(--line);border-radius:10px;background:#0d1b15;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.msg.user{background:#10301f}.msg strong{display:block;color:var(--g);margin-bottom:7px}.composer{display:flex;gap:8px;padding:14px;border-top:1px solid var(--line)}.composer textarea{flex:1;resize:vertical;min-width:0}.composer button{min-width:58px}.row{display:flex;gap:7px}.row button{flex:1}.hidden{display:none!important}@media(max-width:750px){.layout{display:flex;flex-direction:column;height:calc(100dvh - 66px)}aside{max-height:37%;border-right:0;border-bottom:1px solid var(--line)}main{flex:1;min-height:0}header b{font-size:16px}#chat{padding:10px}}
+</style></head><body>
+<header><b>POISONTECH // POISONY</b><span id="status">● READY</span></header>
+<div class="layout"><aside>
+<div class="panel"><h3>UNIVERSAL NEURAL CORE</h3><div class="core" id="core"><span>PT</span></div><small style="text-align:center">MULTI-PROVIDER INTELLIGENCE</small></div>
+<div class="panel"><h3>API CONNECTION</h3>
+<label for="provider">Provider</label><select id="provider"><option value="openai">OpenAI</option><option value="gemini">Google Gemini</option><option value="anthropic">Anthropic Claude</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="ollama">Ollama (local)</option><option value="custom">Custom OpenAI-compatible</option></select>
+<label for="endpoint">API endpoint</label><input id="endpoint" spellcheck="false">
+<label for="model">Model ID</label><input id="model" spellcheck="false">
+<label for="key">API key</label><input id="key" type="password" autocomplete="off" placeholder="Not saved; leave blank for Ollama">
+<small>Enter your key here each session. Never paste it into public code. Direct browser requests may be blocked by CORS; Anthropic and some other providers may require a local proxy.</small>
+<button id="test">TEST CONNECTION</button>
+<button id="save">SAVE SETTINGS</button></div>
+<div class="panel"><h3>COMMAND CENTER</h3><button id="clear">NEW CONVERSATION</button><button id="voice">VOICE: ON</button><button id="stop">STOP SPEAKING</button><button id="export">EXPORT CONVERSATION</button><small id="diag">Provider: not connected</small></div>
+</aside><main><div id="chat" aria-live="polite"></div><div class="composer"><button id="mic" title="Speech input">🎙</button><textarea id="input" rows="2" placeholder="Ask Poisony anything..."></textarea><button id="send">SEND</button></div></main></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const presets={
+ openai:{endpoint:'https://api.openai.com/v1/chat/completions',model:'gpt-4.1-mini',format:'openai'},
+ gemini:{endpoint:'https://generativelanguage.googleapis.com/v1beta/models',model:'gemini-2.5-flash',format:'gemini'},
+ anthropic:{endpoint:'https://api.anthropic.com/v1/messages',model:'claude-sonnet-4-5',format:'anthropic'},
+ openrouter:{endpoint:'https://openrouter.ai/api/v1/chat/completions',model:'openai/gpt-4.1-mini',format:'openai'},
+ groq:{endpoint:'https://api.groq.com/openai/v1/chat/completions',model:'llama-3.3-70b-versatile',format:'openai'},
+ ollama:{endpoint:'http://localhost:11434/api/chat',model:'llama3.2',format:'ollama'},
+ custom:{endpoint:'https://your-provider.example/v1/chat/completions',model:'your-model-id',format:'openai'}
+};
+const SYSTEM=`You are Poisony AI, the intelligent assistant of PoisonTech Industries. Be knowledgeable, clear, creative, professional, and helpful. Assist with coding, science, engineering, research, and everyday questions. Be honest about limitations. Do not claim access to files, devices, or live information without tools.`;
+let messages=[];let busy=false;let voiceOn=true;
+try{const saved=JSON.parse(localStorage.getItem('poisony_universal_chat'));if(Array.isArray(saved))messages=saved.filter(x=>x&&['user','assistant'].includes(x.role)&&typeof x.content==='string').slice(-30)}catch{}
+function save(){try{localStorage.setItem('poisony_universal_chat',JSON.stringify(messages))}catch{}}
+function add(role,text){const el=document.createElement('div');el.className='msg '+role;const heading=document.createElement('strong');heading.textContent=role==='user'?'YOU':'POISONY';const content=document.createElement('div');content.textContent=text;el.append(heading,content);$('chat').append(el);$('chat').scrollTop=$('chat').scrollHeight;return content}
+function setBusy(v){busy=v;$('send').disabled=v;$('test').disabled=v;$('core').classList.toggle('busy',v);$('status').textContent=v?'● PROCESSING':'● READY'}
+function configure(){
+  const p=presets[$('provider').value];
+  $('endpoint').value=p.endpoint;
+  $('model').value=p.model;
+  $('diag').textContent='Provider: '+$('provider').selectedOptions[0].textContent+' | Awaiting test';
+}
+$('provider').addEventListener('change',configure);
+
+// Load saved settings on startup, or fall back to defaults
+try{
+  const cfg=JSON.parse(localStorage.getItem('poisony_api_cfg'));
+  if(cfg&&presets[cfg.provider]){
+    $('provider').value=cfg.provider;
+    $('endpoint').value=cfg.endpoint||presets[cfg.provider].endpoint;
+    $('model').value=cfg.model||presets[cfg.provider].model;
+    $('key').value=cfg.key||'';
+    $('diag').textContent='Loaded saved settings ('+cfg.provider+')';
+  }else{configure()}
+}catch{configure()}
+
+// Save button click handler
+$('save').onclick=()=>{
+  try{
+    localStorage.setItem('poisony_api_cfg',JSON.stringify({
+      provider:$('provider').value,
+      endpoint:$('endpoint').value.trim(),
+      model:$('model').value.trim(),
+      key:$('key').value.trim()
+    }));
+    $('diag').textContent='Settings saved to browser!';
+  }catch{
+    $('diag').textContent='Failed to save settings.';
+  }
+};
+function apiError(response,data){return new Error((data?.error?.message||data?.message||'HTTP '+response.status)+' (HTTP '+response.status+')')}
+async function request(conversation){const provider=$('provider').value;const p=presets[provider];const key=$('key').value.trim();const model=$('model').value.trim();const endpoint=$('endpoint').value.trim();if(!model||!endpoint)throw Error('Model and endpoint are required.');if(provider!=='ollama'&&!key)throw Error('Enter an API key.');if(!/^https?:\/\//i.test(endpoint))throw Error('Endpoint must begin with http:// or https://');
+let url=endpoint,headers={'Content-Type':'application/json'},body;
+if(p.format==='openai'){headers.Authorization='Bearer '+key;body={model,messages:[{role:'system',content:SYSTEM},...conversation],max_tokens:1024}}
+else if(p.format==='gemini'){url=endpoint.replace(/\/$/,'')+'/'+encodeURIComponent(model)+':generateContent';headers['x-goog-api-key']=key;body={systemInstruction:{parts:[{text:SYSTEM}]},contents:conversation.map(x=>({role:x.role==='assistant'?'model':'user',parts:[{text:x.content}]})),generationConfig:{maxOutputTokens:2048}}}
+else if(p.format==='anthropic'){headers['x-api-key']=key;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';body={model,system:SYSTEM,messages:conversation,max_tokens:1024}}
+else if(p.format==='ollama'){body={model,stream:false,messages:[{role:'system',content:SYSTEM},...conversation]}}
+const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),90000);
+try{const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal});let data;try{data=await response.json()}catch{throw Error('Server returned non-JSON data (HTTP '+response.status+'). Check the endpoint.')}if(!response.ok)throw apiError(response,data);
+let text='';if(p.format==='openai')text=data.choices?.[0]?.message?.content;else if(p.format==='gemini')text=data.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('\n');else if(p.format==='anthropic')text=data.content?.filter(x=>x.type==='text').map(x=>x.text).join('\n');else text=data.message?.content;
+if(typeof text!=='string'||!text.trim())throw Error('The provider returned no text. Check the model ID or response format.');return text.trim();
+}catch(err){if(err.name==='AbortError')throw Error('Request timed out.');if(err instanceof TypeError)throw Error('Network or CORS failure. This provider may require a local proxy, or the endpoint may be unreachable.');throw err}finally{clearTimeout(timeout)}}
+function speak(text){if(!voiceOn||!('speechSynthesis' in window))return;speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.pitch=.85;utterance.rate=1;speechSynthesis.speak(utterance)}
+async function send(){const text=$('input').value.trim();if(!text||busy)return;$('input').value='';add('user',text);const next=[...messages,{role:'user',content:text}].slice(-24);const output=add('assistant','Processing...');setBusy(true);try{const reply=await request(next);output.textContent=reply;messages=[...next,{role:'assistant',content:reply}].slice(-30);save();$('diag').textContent='Connected: '+$('provider').value+' / '+$('model').value;speak(reply)}catch(err){output.textContent='CONNECTION ERROR: '+err.message+'\nYour message was not saved; you can retry it.';$('input').value=text;$('diag').textContent='Connection failed'}finally{setBusy(false)}}
+$('send').onclick=send;$('input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+$('test').onclick=async()=>{if(busy)return;setBusy(true);try{const reply=await request([{role:'user',content:'Reply briefly: POISONY SYSTEM ONLINE'}]);add('assistant','CONNECTION TEST SUCCESSFUL\n'+reply);$('diag').textContent='Connected: '+$('provider').value+' / '+$('model').value}catch(err){add('assistant','CONNECTION TEST FAILED: '+err.message);$('diag').textContent='Connection failed'}finally{setBusy(false)}};
+$('clear').onclick=()=>{if(busy)return;messages=[];save();$('chat').replaceChildren();add('assistant','New conversation initialized. Poisony is ready.')};
+$('voice').onclick=()=>{voiceOn=!voiceOn;$('voice').textContent='VOICE: '+(voiceOn?'ON':'OFF');if(!voiceOn&&'speechSynthesis'in window)speechSynthesis.cancel()};$('stop').onclick=()=>{if('speechSynthesis'in window)speechSynthesis.cancel()};
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify(messages,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='Poisony_Conversation.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(Recognition){const r=new Recognition();r.lang='en-US';r.onresult=e=>{$('input').value=e.results[0][0].transcript};r.onerror=e=>{$('status').textContent='● MICROPHONE: '+e.error};$('mic').onclick=()=>{try{r.start()}catch{}}}else{$('mic').disabled=true;$('mic').title='Speech recognition not available in this browser'}
+if(messages.length)messages.forEach(x=>add(x.role,x.content));else add('assistant','POISONY AI V2.0 ONLINE.\nChoose an API provider, enter your model ID and key, then test the connection.\nLocal Ollama can run without a cloud API key.');
+</script>
+</body>
+</html>

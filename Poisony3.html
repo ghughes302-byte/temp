@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POISONY AI</title>
+
+<style>
+:root {
+  --g: #00ed89;
+  --bg: #050b09;
+  --p: #0c1b15;
+  --line: #24543d;
+  --txt: #dffbea;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--txt);
+  font: 14px Consolas, monospace;
+}
+button, input, select, textarea { font: inherit; }
+button {
+  background: #123021;
+  color: var(--g);
+  border: 1px solid var(--g);
+  border-radius: 7px;
+  padding: 10px;
+  cursor: pointer;
+}
+button:disabled { opacity: .5; cursor: not-allowed; }
+input, select, textarea {
+  width: 100%;
+  background: #07130e;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--txt);
+  padding: 10px;
+}
+label {
+  display: block;
+  color: #a6d4b9;
+  margin: 11px 0 5px;
+}
+small {
+  color: #a0b9ab;
+  line-height: 1.6;
+  display: block;
+  margin-top: 7px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 17px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #08150f;
+}
+header b {
+  color: var(--g);
+  font-size: 21px;
+  letter-spacing: 2px;
+}
+#status { color: var(--g); }
+.layout {
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  height: calc(100dvh - 66px);
+}
+aside {
+  overflow: auto;
+  padding: 16px;
+  border-right: 1px solid var(--line);
+}
+.panel {
+  background: var(--p);
+  border: 1px solid var(--line);
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+h3 {
+  color: var(--g);
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin: 0 0 13px;
+}
+.panel button {
+  width: 100%;
+  margin-top: 10px;
+}
+.core {
+  position: relative;
+  height: 120px;
+  width: 120px;
+  margin: 15px auto;
+  border: 3px solid var(--g);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 30px #00ed8966;
+  animation: pulse 3s infinite;
+}
+.core:before {
+  content: '';
+  position: absolute;
+  width: 91px;
+  height: 91px;
+  border: 2px dashed var(--g);
+  border-radius: 50%;
+  animation: spin 12s linear infinite;
+}
+.core span {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--g);
+}
+.core.busy { animation: pulse .6s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 60px #00ed8999; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+#chat {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}
+.msg {
+  max-width: 900px;
+  margin: 0 auto 15px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d1b15;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.msg.user { background: #10301f; }
+.msg strong {
+  display: block;
+  color: var(--g);
+  margin-bottom: 7px;
+}
+.msg img {
+  display: block;
+  max-width: 100%;
+  max-height: 600px;
+  margin-top: 12px;
+  border-radius: 8px;
+}
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+}
+.composer textarea {
+  flex: 1;
+  resize: vertical;
+  min-width: 0;
+}
+.composer button { min-width: 58px; }
+.row { display: flex; gap: 7px; }
+.row button { flex: 1; }
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 7px 0;
+}
+.history-item button:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.history-item button.active {
+  background: #16452e;
+}
+.history-item .delete-chat {
+  flex: 0 0 38px;
+  color: #ff8a8a;
+  border-color: #8d4141;
+}
+.hidden { display: none !important; }
+
+/* LOGIN */
+#loginScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background:
+    radial-gradient(circle at center, #103d29 0%, #050b09 65%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.login-box {
+  width: 100%;
+  max-width: 390px;
+  padding: 35px;
+  border: 1px solid var(--g);
+  border-radius: 15px;
+  background: #07130e;
+  box-shadow: 0 0 40px #00ed8944;
+  text-align: center;
+}
+.login-box h1 {
+  color: var(--g);
+  letter-spacing: 3px;
+  margin-top: 0;
+}
+.login-box input { margin: 8px 0; }
+.login-box button { width: 100%; margin-top: 12px; }
+#loginError {
+  color: #ff7777;
+  min-height: 20px;
+}
+#logout {
+  width: 100%;
+  margin-top: 10px;
+  border-color: #8d4141;
+  color: #ff8a8a;
+}
+
+@media(max-width:750px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 66px);
+  }
+  aside {
+    max-height: 42%;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  main { flex: 1; min-height: 0; }
+  header b { font-size: 16px; }
+  #chat { padding: 10px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <form class="login-box" id="loginForm">
+    <h1>POISONTECH</h1>
+    <p>SECURE SYSTEM ACCESS</p>
+
+    <label for="loginUser">Username</label>
+    <input id="loginUser" autocomplete="username"
+           placeholder="Enter username" required>
+
+    <label for="loginPass">Password</label>
+    <input id="loginPass" type="password"
+           autocomplete="current-password"
+           placeholder="Enter password" required>
+
+    <button type="submit">ACCESS SYSTEM</button>
+    <p id="loginError"></p>
+    <small>POISONTECH INDUSTRIES // AUTHORIZED ACCESS ONLY</small>
+  </form>
+</div>
+
+<header>
+  <b>POISONTECH // POISONY</b>
+  <span id="status">● READY</span>
+</header>
+
+<div class="layout">
+  <aside>
+
+    <div class="panel">
+      <h3>UNIVERSAL NEURAL CORE</h3>
+      <div class="core" id="core"><span>PT</span></div>
+      <small style="text-align:center">
+        MULTI-PROVIDER INTELLIGENCE
+      </small>
+    </div>
+
+    <div class="panel">
+      <h3>CHAT HISTORY</h3>
+      <button id="newChat">+ NEW CHAT</button>
+      <div id="historyList"></div>
+    </div>
+
+    <div class="panel">
+      <h3>API CONNECTION</h3>
+
+      <label for="provider">Provider</label>
+      <select id="provider">
+        <option value="openai">OpenAI</option>
+        <option value="gemini">Google Gemini</option>
+        <option value="anthropic">Anthropic Claude</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="groq">Groq</option>
+        <option value="ollama">Ollama (local)</option>
+        <option value="custom">Custom OpenAI-compatible</option>
+      </select>
+
+      <label for="endpoint">API endpoint</label>
+      <input id="endpoint" spellcheck="false">
+
+      <label for="model">Model ID</label>
+      <input id="model" spellcheck="false">
+
+      <label for="key">API key</label>
+      <input id="key" type="password" autocomplete="off"
+             placeholder="Enter API key">
+
+      <small>
+        Your API key is kept in this browser tab's memory and is not
+        included in saved settings. Direct browser requests may be
+        blocked by CORS. Use a trusted backend proxy for production.
+      </small>
+
+      <button id="test">TEST CONNECTION</button>
+      <button id="save">SAVE SETTINGS</button>
+    </div>
+
+    <div class="panel">
+      <h3>IMAGE GENERATION</h3>
+
+      <label for="imageModel">OpenRouter image model</label>
+      <input id="imageModel"
+             value="google/gemini-2.5-flash-image"
+             spellcheck="false">
+
+      <small>
+        Image generation uses OpenRouter. Select an image-capable
+        model supported by your OpenRouter account.
+      </small>
+
+      <button id="imageMode">IMAGE MODE: OFF</button>
+    </div>
+
+    <div class="panel">
+      <h3>COMMAND CENTER</h3>
+      <button id="voice">VOICE: ON</button>
+      <button id="stop">STOP SPEAKING</button>
+      <button id="export">EXPORT CONVERSATION</button>
+      <button id="logout">LOG OUT</button>
+      <small id="diag">Provider: not connected</small>
+    </div>
+
+  </aside>
+
+  <main>
+    <div id="chat" aria-live="polite"></div>
+
+    <div class="composer">
+      <button id="mic" title="Speech input">🎙</button>
+      <textarea id="input" rows="2"
+                placeholder="Ask Poisony anything..."></textarea>
+      <button id="send">SEND</button>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+
+/* ---------------- LOGIN ---------------- */
+
+const LOGIN_USERNAME = 'PoisonTechAdmin';
+const LOGIN_PASSWORD = 'Admin2';
+
+function showLogin() {
+  $('loginScreen').classList.remove('hidden');
+}
+
+function hideLogin() {
+  $('loginScreen').classList.add('hidden');
+}
+
+if (sessionStorage.getItem('poisony_logged_in') === 'true') {
+  hideLogin();
+} else {
+  showLogin();
+}
+
+$('loginForm').addEventListener('submit', event => {
+  event.preventDefault();
+
+  const username = $('loginUser').value;
+  const password = $('loginPass').value;
+
+  if (username === LOGIN_USERNAME && password === LOGIN_PASSWORD) {
+    sessionStorage.setItem('poisony_logged_in', 'true');
+    $('loginError').textContent = '';
+    hideLogin();
+  } else {
+    $('loginError').textContent = 'Incorrect username or password.';
+    $('loginPass').value = '';
+  }
+});
+
+$('logout').onclick = () => {
+  sessionStorage.removeItem('poisony_logged_in');
+  showLogin();
+  $('loginPass').value = '';
+  $('loginUser').value = '';
+};
+
+/* ---------------- PROVIDERS ---------------- */
+
+const presets = {
+  openai: {
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4.1-mini',
+    format: 'openai'
+  },
+  gemini: {
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
+    model: 'gemini-2.5-flash',
+    format: 'gemini'
+  },
+  anthropic: {
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    model: 'claude-sonnet-4-5',
+    format: 'anthropic'
+  },
+  openrouter: {
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    model: 'openai/gpt-4.1-mini',
+    format: 'openai'
+  },
+  groq: {
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    model: 'llama-3.3-70b-versatile',
+    format: 'openai'
+  },
+  ollama: {
+    endpoint: 'http://localhost:11434/api/chat',
+    model: 'llama3.2',
+    format: 'ollama'
+  },
+  custom: {
+    endpoint: 'https://your-provider.example/v1/chat/completions',
+    model: 'your-model-id',
+    format: 'openai'
+  }
+};
+
+const SYSTEM = `You are Poisony AI, the intelligent assistant of
+PoisonTech Industries. Be knowledgeable, clear, creative,
+professional, and helpful. Assist with coding, science, engineering,
+research, and everyday questions. Be honest about limitations.`;
+
+let chats = [];
+let activeChatId = null;
+let busy = false;
+let voiceOn = true;
+let imageMode = false;
+
+const HISTORY_KEY = 'poisony_chat_history_v1';
+const OLD_CHAT_KEY = 'poisony_universal_chat';
+const SETTINGS_KEY = 'poisony_api_cfg';
+
+function makeId() {
+  return Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 8);
+}
+
+function activeChat() {
+  return chats.find(chat => chat.id === activeChatId);
+}
+
+function saveHistory() {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(chats));
+  } catch (error) {
+    $('diag').textContent = 'Could not save chat history.';
+  }
+}
+
+function createChat() {
+  const chat = {
+    id: makeId(),
+    title: 'New conversation',
+    messages: []
+  };
+
+  chats.unshift(chat);
+  activeChatId = chat.id;
+  saveHistory();
+  renderHistory();
+  renderChat();
+}
+
+function switchChat(id) {
+  if (!chats.some(chat => chat.id === id)) return;
+  activeChatId = id;
+  renderHistory();
+  renderChat();
+}
+
+function deleteChat(id) {
+  chats = chats.filter(chat => chat.id !== id);
+
+  if (activeChatId === id) {
+    activeChatId = chats[0]?.id || null;
+  }
+
+  if (!activeChatId) createChat();
+
+  saveHistory();
+  renderHistory();
+  renderChat();
+}
+
+function loadHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HISTORY_KEY));
+
+    if (Array.isArray(saved)) {
+      chats = saved.filter(chat =>
+        chat &&
+        typeof chat.id === 'string' &&
+        Array.isArray(chat.messages)
+      );
+    }
+  } catch {}
+
+  // Migrate the original single-conversation history.
+  if (!chats.length) {
+    try {
+      const old = JSON.parse(localStorage.getItem(OLD_CHAT_KEY));
+
+      if (Array.isArray(old) && old.length) {
+        chats.push({
+          id: makeId(),
+          title: 'Previous conversation',
+          messages: old.filter(message =>
+            message &&
+            ['user', 'assistant'].includes(message.role) &&
+            typeof message.content === 'string'
+          )
+        });
+      }
+    } catch {}
+  }
+
+  if (!chats.length) {
+    chats.push({
+      id: makeId(),
+      title: 'New conversation',
+      messages: []
+    });
+  }
+
+  activeChatId = chats[0].id;
+  saveHistory();
+}
+
+function renderHistory() {
+  const list = $('historyList');
+  list.replaceChildren();
+
+  chats.forEach(chat => {
+    const row = document.createElement('div');
+    row.className = 'history-item';
+
+    const select = document.createElement('button');
+    select.textContent = chat.title || 'New conversation';
+    select.classList.toggle('active', chat.id === activeChatId);
+    select.onclick = () => switchChat(chat.id);
+
+    const remove = document.createElement('button');
+    remove.textContent = '×';
+    remove.className = 'delete-chat';
+    remove.title = 'Delete conversation';
+    remove.onclick = () => {
+      if (confirm('Delete this conversation?')) {
+        deleteChat(chat.id);
+      }
+    };
+
+    row.append(select, remove);
+    list.append(row);
+  });
+}
+
+function renderChat() {
+  const area = $('chat');
+  area.replaceChildren();
+
+  const chat = activeChat();
+  if (!chat) return;
+
+  chat.messages.forEach(message => {
+    addMessageToScreen(message);
+  });
+
+  if (!chat.messages.length) {
+    add('assistant',
+      'POISONY AI ONLINE.\nChoose a provider, enter your API key, ' +
+      'and test your connection. Start a conversation whenever you are ready.');
+  }
+}
+
+function addMessageToScreen(message) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + message.role;
+
+  const heading = document.createElement('strong');
+  heading.textContent = message.role === 'user' ? 'YOU' : 'POISONY';
+  el.append(heading);
+
+  if (message.content) {
+    const content = document.createElement('div');
+    content.textContent = message.content;
+    el.append(content);
+  }
+
+  if (message.image) {
+    const img = document.createElement('img');
+    img.src = message.image;
+    img.alt = 'Generated image';
+    el.append(img);
+  }
+
+  $('chat').append(el);
+  $('chat').scrollTop = $('chat').scrollHeight;
+  return el;
+}
+
+function add(role, content, image = null) {
+  const message = { role, content, image };
+  const el = addMessageToScreen(message);
+  return el;
+}
+
+function saveMessage(role, content, image = null) {
+  const chat = activeChat();
+  if (!chat) return;
+
+  chat.messages.push({ role, content, image });
+
+  if (role === 'user' && chat.title === 'New conversation') {
+    chat.title = content.slice(0, 32) +
+      (content.length > 32 ? '...' : '');
+  }
+
+  // Keep each conversation to a manageable size.
+  chat.messages = chat.messages.slice(-60);
+
+  saveHistory();
+  renderHistory();
+}
+
+/* ---------------- SETTINGS ---------------- */
+
+function configure() {
+  const preset = presets[$('provider').value];
+  $('endpoint').value = preset.endpoint;
+  $('model').value = preset.model;
+  $('diag').textContent =
+    'Provider: ' + $('provider').selectedOptions[0].textContent;
+}
+
+$('provider').addEventListener('change', configure);
+
+try {
+  const cfg = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+
+  if (cfg && presets[cfg.provider]) {
+    $('provider').value = cfg.provider;
+    $('endpoint').value =
+      cfg.endpoint || presets[cfg.provider].endpoint;
+    $('model').value =
+      cfg.model || presets[cfg.provider].model;
+  } else {
+    configure();
+  }
+} catch {
+  configure();
+}
+
+$('save').onclick = () => {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      provider: $('provider').value,
+      endpoint: $('endpoint').value.trim(),
+      model: $('model').value.trim()
+    }));
+
+    $('diag').textContent =
+      'Provider settings saved. API key is not saved.';
+  } catch {
+    $('diag').textContent = 'Could not save settings.';
+  }
+};
+
+/* ---------------- API REQUESTS ---------------- */
+
+function apiError(response, data) {
+  return new Error(
+    data?.error?.message ||
+    data?.message ||
+    'HTTP ' + response.status
+  );
+}
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out.');
+    }
+    if (error instanceof TypeError) {
+      throw new Error(
+        'Network or CORS error. Check the endpoint or use a backend proxy.'
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function request(conversation) {
+  const provider = $('provider').value;
+  const preset = presets[provider];
+  const key = $('key').value.trim();
+  const model = $('model').value.trim();
+  const endpoint = $('endpoint').value.trim();
+
+  if (!model || !endpoint) {
+    throw new Error('Model and endpoint are required.');
+  }
+
+  if (provider !== 'ollama' && !key) {
+    throw new Error('Enter your API key.');
+  }
+
+  if (!/^https?:\/\//i.test(endpoint)) {
+    throw new Error('Endpoint must begin with http:// or https://');
+  }
+
+  let url = endpoint;
+  const headers = { 'Content-Type': 'application/json' };
+  let body;
+
+  if (preset.format === 'openai') {
+    headers.Authorization = 'Bearer ' + key;
+    body = {
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        ...conversation
+      ],
+      max_tokens: 2048
+    };
+  } else if (preset.format === 'gemini') {
+    url = endpoint.replace(/\/$/, '') + '/' +
+      encodeURIComponent(model) + ':generateContent';
+
+    headers['x-goog-api-key'] = key;
+
+    body = {
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: conversation.map(message => ({
+        role: message.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: message.content }]
+      })),
+      generationConfig: { maxOutputTokens: 2048 }
+    };
+  } else if (preset.format === 'anthropic') {
+    headers['x-api-key'] = key;
+    headers['anthropic-version'] = '2023-06-01';
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+
+    body = {
+      model,
+      system: SYSTEM,
+      messages: conversation,
+      max_tokens: 2048
+    };
+  } else if (preset.format === 'ollama') {
+    body = {
+      model,
+      stream: false,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        ...conversation
+      ]
+    };
+  }
+
+  const response = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('The server returned an invalid response.');
+  }
+
+  if (!response.ok) throw apiError(response, data);
+
+  let answer = '';
+
+  if (preset.format === 'openai') {
+    answer = data.choices?.[0]?.message?.content;
+  } else if (preset.format === 'gemini') {
+    answer = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || '').join('\n');
+  } else if (preset.format === 'anthropic') {
+    answer = data.content
+      ?.filter(part => part.type === 'text')
+      .map(part => part.text).join('\n');
+  } else {
+    answer = data.message?.content;
+  }
+
+  if (typeof answer !== 'string' || !answer.trim()) {
+    throw new Error('The provider returned no text.');
+  }
+
+  return answer.trim();
+}
+
+/* ---------------- OPENROUTER IMAGE GENERATION ---------------- */
+
+async function generateImage(prompt) {
+  const key = $('key').value.trim();
+
+  if (!key) {
+    throw new Error('Enter your OpenRouter API key in API CONNECTION.');
+  }
+
+  const imageModel = $('imageModel').value.trim();
+
+  if (!imageModel) {
+    throw new Error('Enter an image model ID.');
+  }
+
+  const response = await fetchWithTimeout(
+    'https://openrouter.ai/api/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + key,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': location.href,
+        'X-Title': 'POISONY AI'
+      },
+      body: JSON.stringify({
+        model: imageModel,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }],
+        modalities: ['image', 'text']
+      })
+    }
+  );
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('OpenRouter returned an invalid response.');
+  }
+
+  if (!response.ok) throw apiError(response, data);
+
+  const message = data.choices?.[0]?.message;
+  const images = message?.images || [];
+
+  let imageUrl = null;
+
+  for (const item of images) {
+    const candidate =
+      item?.image_url?.url ||
+      item?.image_url ||
+      item?.url;
+
+    if (typeof candidate === 'string' &&
+        candidate.startsWith('data:image/')) {
+      imageUrl = candidate;
+      break;
+    }
+  }
+
+  if (!imageUrl) {
+    throw new Error(
+      'No image was returned. Check that your selected OpenRouter model ' +
+      'supports image generation and that your account has access to it.'
+    );
+  }
+
+  return {
+    image: imageUrl,
+    text: message?.content || 'Image generated successfully.'
+  };
+}
+
+/* ---------------- CHAT AND IMAGE SEND ---------------- */
+
+function setBusy(value) {
+  busy = value;
+  $('send').disabled = value;
+  $('test').disabled = value;
+  $('imageMode').disabled = value;
+  $('core').classList.toggle('busy', value);
+  $('status').textContent = value ? '● PROCESSING' : '● READY';
+}
+
+async function send() {
+  const prompt = $('input').value.trim();
+
+  if (!prompt || busy) return;
+
+  $('input').value = '';
+  add('user', prompt);
+  saveMessage('user', prompt);
+
+  setBusy(true);
+
+  const output = add('assistant', 'Processing...');
+
+  try {
+    if (imageMode) {
+      const result = await generateImage(prompt);
+
+      output.textContent = result.text;
+
+      const img = document.createElement('img');
+      img.src = result.image;
+      img.alt = 'Generated image';
+      output.append(img);
+
+      saveMessage('assistant', result.text, result.image);
+
+      $('diag').textContent = 'Image generation completed.';
+    } else {
+      const chat = activeChat();
+
+      const conversation = chat.messages
+        .filter(message => ['user', 'assistant'].includes(message.role))
+        .filter(message => !message.image)
+        .slice(-24)
+        .map(message => ({
+          role: message.role,
+          content: message.content
+        }));
+
+      // The last user message is already included in saved history.
+      const reply = await request(conversation);
+
+      output.textContent = reply;
+      saveMessage('assistant', reply);
+
+      $('diag').textContent =
+        'Connected: ' + $('provider').value +
+        ' / ' + $('model').value;
+
+      speak(reply);
+    }
+  } catch (error) {
+    output.textContent = 'ERROR: ' + error.message;
+    $('diag').textContent = 'Request failed.';
+  } finally {
+    setBusy(false);
+  }
+}
+
+$('send').onclick = send;
+
+$('input').addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    send();
+  }
+});
+
+/* ---------------- IMAGE MODE ---------------- */
+
+$('imageMode').onclick = () => {
+  imageMode = !imageMode;
+
+  $('imageMode').textContent =
+    'IMAGE MODE: ' + (imageMode ? 'ON' : 'OFF');
+
+  $('input').placeholder = imageMode
+    ? 'Describe the image you want to generate...'
+    : 'Ask Poisony anything...';
+};
+
+/* ---------------- CONNECTION TEST ---------------- */
+
+$('test').onclick = async () => {
+  if (busy) return;
+
+  setBusy(true);
+
+  try {
+    const reply = await request([{
+      role: 'user',
+      content: 'Reply briefly: POISONY SYSTEM ONLINE'
+    }]);
+
+    add('assistant', 'CONNECTION TEST SUCCESSFUL\n' + reply);
+
+    $('diag').textContent =
+      'Connected: ' + $('provider').value +
+      ' / ' + $('model').value;
+  } catch (error) {
+    add('assistant', 'CONNECTION TEST FAILED: ' + error.message);
+    $('diag').textContent = 'Connection failed.';
+  } finally {
+    setBusy(false);
+  }
+};
+
+/* ---------------- NEW CHAT AND HISTORY ---------------- */
+
+$('newChat').onclick = () => {
+  if (busy) return;
+  createChat();
+};
+
+$('voice').onclick = () => {
+  voiceOn = !voiceOn;
+  $('voice').textContent = 'VOICE: ' + (voiceOn ? 'ON' : 'OFF');
+
+  if (!voiceOn && 'speechSynthesis' in window) {
+    speechSynthesis.cancel();
+  }
+};
+
+/* ---------------- VOICE ---------------- */
+
+function speak(text) {
+  if (!voiceOn || !('speechSynthesis' in window)) return;
+
+  speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.pitch = .85;
+  utterance.rate = 1;
+
+  speechSynthesis.speak(utterance);
+}
+
+$('stop').onclick = () => {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+};
+
+const Recognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (Recognition) {
+  const recognition = new Recognition();
+  recognition.lang = 'en-US';
+
+  recognition.onresult = event => {
+    $('input').value = event.results[0][0].transcript;
+  };
+
+  recognition.onerror = event => {
+    $('status').textContent = '● MICROPHONE: ' + event.error;
+  };
+
+  $('mic').onclick = () => {
+    try { recognition.start(); } catch {}
+  };
+} else {
+  $('mic').disabled = true;
+  $('mic').title = 'Speech recognition is unavailable in this browser.';
+}
+
+/* ---------------- EXPORT ---------------- */
+
+$('export').onclick = () => {
+  const chat = activeChat();
+  if (!chat) return;
+
+  const blob = new Blob(
+    [JSON.stringify(chat, null, 2)],
+    { type: 'application/json' }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = 'Poisony_Conversation.json';
+  link.click();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+/* ---------------- STARTUP ---------------- */
+
+loadHistory();
+renderHistory();
+renderChat();
+
+</script>
+</body>
+</html>

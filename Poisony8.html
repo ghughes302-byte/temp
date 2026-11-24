@@ -1,0 +1,785 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POISONY AI</title>
+<style>
+:root{--g:#00ed89;--bg:#050b09;--p:#0c1b15;--line:#24543d;--txt:#dffbea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px Consolas,monospace}
+header{display:flex;justify-content:space-between;align-items:center;padding:17px 22px;border-bottom:1px solid var(--line);background:#08150f}
+header b{color:var(--g);font-size:21px;letter-spacing:2px}
+#status{color:var(--g)}
+.layout{display:grid;grid-template-columns:310px minmax(0,1fr);height:calc(100dvh - 66px)}
+aside{overflow:auto;padding:16px;border-right:1px solid var(--line)}
+.panel{background:var(--p);border:1px solid var(--line);padding:15px;border-radius:12px;margin-bottom:15px}
+h3{color:var(--g);font-size:13px;letter-spacing:1px;margin:0 0 13px}
+.core{position:relative;height:120px;width:120px;margin:15px auto;border:3px solid var(--g);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 30px #00ed8966;animation:pulse 3s infinite}
+.core:before{content:'';position:absolute;width:91px;height:91px;border:2px dashed var(--g);border-radius:50%;animation:spin 12s linear infinite}
+.core span{font-size:28px;font-weight:bold;color:var(--g)}
+.core.busy{animation:pulse .6s infinite}
+@keyframes pulse{50%{box-shadow:0 0 60px #00ed8999}}
+@keyframes spin{to{transform:rotate(360deg)}}
+label{display:block;color:#a6d4b9;margin:11px 0 5px}
+input,select,textarea{width:100%;background:#07130e;border:1px solid var(--line);border-radius:7px;color:var(--txt);padding:10px;font:inherit}
+button{background:#123021;color:var(--g);border:1px solid var(--g);border-radius:7px;padding:10px;cursor:pointer;font:inherit}
+button:disabled{opacity:.5;cursor:not-allowed}
+.panel button{width:100%;margin-top:10px}
+small{color:#a0b9ab;line-height:1.6;display:block;margin-top:7px}
+main{display:flex;flex-direction:column;min-height:0;min-width:0}
+#chat{flex:1;overflow:auto;padding:20px}
+.msg{max-width:900px;margin:0 auto 15px;padding:15px;border:1px solid var(--line);border-radius:10px;background:#0d1b15;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.msg.user{background:#10301f}
+.msg strong{display:block;color:var(--g);margin-bottom:7px}
+.composer{display:flex;gap:8px;padding:14px;border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:vertical;min-width:0}
+.composer button{min-width:58px}
+.chat-item{display:flex;gap:5px;margin:7px 0}
+.chat-item button:first-child{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-item button.active{background:#17452e}
+.chat-item .delete{flex:0 0 38px;color:#ff7777;border-color:#8c3434}
+.hidden{display:none!important}
+#loginScreen{position:fixed;inset:0;z-index:20;background:radial-gradient(circle,#102b1c,#030806 70%);display:grid;place-items:center;padding:20px}
+.login-card{width:min(420px,100%);padding:28px;background:#091710;border:1px solid var(--g);border-radius:14px;box-shadow:0 0 40px #00ed8933;text-align:center}
+.login-card h1{color:var(--g);letter-spacing:3px;font-size:24px}
+.login-card p{color:#a6d4b9}
+.login-card button{width:100%;margin-top:14px}
+.login-error{color:#ff6969;min-height:20px;line-height:1.5}
+.auth-toggle{background:transparent;border-color:var(--line)!important;color:#b6e9ca!important}
+.login-card small{margin-top:14px}
+@media(max-width:750px){
+ .layout{display:flex;flex-direction:column;height:calc(100dvh - 66px)}
+ aside{max-height:42%;border-right:0;border-bottom:1px solid var(--line)}
+ main{flex:1;min-height:0}
+ header b{font-size:16px}
+ #chat{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+ <div class="login-card">
+  <h1>POISONTECH</h1>
+  <p id="authHeading">SIGN IN TO YOUR POISONY ACCOUNT</p>
+  <form id="loginForm">
+   <label for="loginEmail">Email address</label>
+   <input id="loginEmail" type="email" autocomplete="email" required>
+   <label for="loginPass">Password</label>
+   <input id="loginPass" type="password" minlength="8" autocomplete="current-password" required>
+   <div class="login-error" id="loginError" aria-live="polite"></div>
+   <button id="authSubmit" type="submit">SIGN IN</button>
+  </form>
+  <button id="authToggle" type="button" class="auth-toggle">Need an account? SIGN UP</button>
+  <small>Sign in with your email and password. Your conversations are saved to your cloud account.</small>
+ </div>
+</div>
+
+<header>
+ <b>POISONTECH // POISONY</b>
+ <span id="status">● READY</span>
+</header>
+
+<div class="layout">
+<aside>
+ <div class="panel">
+  <h3>UNIVERSAL NEURAL CORE</h3>
+  <div class="core" id="core"><span>PT</span></div>
+  <small style="text-align:center">MULTI-PROVIDER INTELLIGENCE</small>
+ </div>
+
+ <div class="panel">
+  <h3>CHAT HISTORY</h3>
+  <button id="newChat">+ NEW CHAT</button>
+  <div id="chatList"></div>
+ </div>
+
+ <div class="panel">
+  <h3>API CONNECTION</h3>
+  <label for="provider">Provider</label>
+  <select id="provider">
+   <option value="openai">OpenAI</option>
+   <option value="gemini">Google Gemini</option>
+   <option value="anthropic">Anthropic Claude</option>
+   <option value="openrouter" selected>OpenRouter</option>
+   <option value="groq">Groq</option>
+   <option value="ollama">Ollama (local)</option>
+   <option value="custom">Custom OpenAI-compatible</option>
+  </select>
+
+  <label for="endpoint">API endpoint</label>
+  <input id="endpoint" spellcheck="false">
+
+  <label for="model">Chat model ID</label>
+  <input id="model" spellcheck="false">
+
+  <label for="key">API key</label>
+  <input id="key" type="password" autocomplete="off" placeholder="Enter API key for this session">
+
+  <small>Your provider API key is kept in this page's memory and is not saved in local storage.</small>
+  <button id="test">TEST CONNECTION</button>
+  <button id="save">SAVE SETTINGS</button>
+ </div>
+
+ <div class="panel">
+  <h3>COMMAND CENTER</h3>
+  <button id="voice">VOICE: ON</button>
+  <button id="stop">STOP SPEAKING</button>
+  <button id="export">EXPORT CONVERSATION</button>
+  <button id="logout">LOG OUT</button>
+  <small id="diag">Provider: not connected</small>
+ </div>
+</aside>
+
+<main>
+ <div id="chat" aria-live="polite"></div>
+ <div class="composer">
+  <button id="mic" title="Speech input">🎙</button>
+  <textarea id="input" rows="2" placeholder="Ask Poisony anything..."></textarea>
+  <button id="send">SEND</button>
+ </div>
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+'use strict';
+
+const $=id=>document.getElementById(id);
+
+/* SUPABASE CONFIGURATION */
+const SUPABASE_URL='https://dexsyqsxbojrtbrvvxub.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_VuRDU1j7ddNBeKyfxoUfwQ_16UIb8vy';
+
+const db=window.supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_PUBLISHABLE_KEY
+);
+
+let currentUser=null;
+let authMode='signin';
+let loginLocked=false;
+let loginLockTimer=null;
+
+const presets={
+ openai:{endpoint:'https://api.openai.com/v1/chat/completions',model:'gpt-4.1-mini',format:'openai'},
+ gemini:{endpoint:'https://generativelanguage.googleapis.com/v1beta/models',model:'gemini-2.5-flash',format:'gemini'},
+ anthropic:{endpoint:'https://api.anthropic.com/v1/messages',model:'claude-sonnet-4-5',format:'anthropic'},
+ openrouter:{endpoint:'https://openrouter.ai/api/v1/chat/completions',model:'openai/gpt-4.1-mini',format:'openai'},
+ groq:{endpoint:'https://api.groq.com/openai/v1/chat/completions',model:'llama-3.3-70b-versatile',format:'openai'},
+ ollama:{endpoint:'http://localhost:11434/api/chat',model:'llama3.2',format:'ollama'},
+ custom:{endpoint:'https://your-provider.example/v1/chat/completions',model:'your-model-id',format:'openai'}
+};
+
+const SYSTEM='You are Poisony AI, the intelligent assistant of PoisonTech Industries. Be knowledgeable, clear, creative, professional, and helpful. Be honest about limitations.';
+
+let chats=[];
+let activeChatId=null;
+let busy=false;
+let voiceOn=true;
+
+function makeId(){return crypto.randomUUID();}
+
+/* CLOUD CHAT HISTORY */
+
+async function loadChats(){
+ if(!currentUser)return;
+
+ const {data,error}=await db.from('user_chats')
+  .select('id,title,messages,updated_at')
+  .eq('user_id',currentUser.id)
+  .order('updated_at',{ascending:false});
+
+ if(error)throw error;
+
+ chats=(data||[]).map(c=>({
+  id:c.id,
+  title:c.title||'New conversation',
+  messages:Array.isArray(c.messages)?c.messages:[],
+  updated:Date.parse(c.updated_at)||Date.now()
+ }));
+
+ if(!chats.length){
+  await createChat();
+  return;
+ }
+
+ activeChatId=chats[0].id;
+ renderChatList();
+ renderMessages();
+}
+
+function activeChat(){
+ return chats.find(c=>c.id===activeChatId);
+}
+
+function renderChatList(){
+ const list=$('chatList');
+ list.replaceChildren();
+
+ chats.slice().sort((a,b)=>b.updated-a.updated).forEach(c=>{
+  const row=document.createElement('div');
+  row.className='chat-item';
+
+  const open=document.createElement('button');
+  open.textContent=c.title||'New conversation';
+  if(c.id===activeChatId)open.classList.add('active');
+  open.onclick=()=>switchChat(c.id);
+
+  const del=document.createElement('button');
+  del.className='delete';
+  del.textContent='×';
+  del.title='Delete chat';
+  del.onclick=()=>deleteChat(c.id);
+
+  row.append(open,del);
+  list.append(row);
+ });
+}
+
+function renderMessages(){
+ $('chat').replaceChildren();
+ const c=activeChat();
+
+ if(!c||!c.messages.length){
+  addMessage('assistant','POISONY AI ONLINE.\nYour conversations are saved to your account.');
+  return;
+ }
+
+ c.messages.forEach(m=>addMessage(m.role,m.content));
+}
+
+async function persist(){
+ const c=activeChat();
+ if(!c||!currentUser)return;
+
+ c.updated=Date.now();
+
+ const {error}=await db.from('user_chats').upsert({
+  id:c.id,
+  user_id:currentUser.id,
+  title:c.title,
+  messages:c.messages,
+  updated_at:new Date(c.updated).toISOString()
+ },{onConflict:'id'});
+
+ if(error){
+  $('diag').textContent='Cloud save failed: '+error.message;
+  return;
+ }
+
+ renderChatList();
+}
+
+async function createChat(){
+ if(!currentUser)return;
+
+ const c={
+  id:makeId(),
+  title:'New conversation',
+  messages:[],
+  updated:Date.now()
+ };
+
+ chats.unshift(c);
+ activeChatId=c.id;
+ await persist();
+ renderChatList();
+ renderMessages();
+}
+
+function switchChat(id){
+ activeChatId=id;
+ renderChatList();
+ renderMessages();
+}
+
+async function deleteChat(id){
+ if(!currentUser)return;
+
+ const {error}=await db.from('user_chats')
+  .delete().eq('id',id).eq('user_id',currentUser.id);
+
+ if(error){
+  $('diag').textContent='Could not delete chat: '+error.message;
+  return;
+ }
+
+ chats=chats.filter(c=>c.id!==id);
+
+ if(!chats.length){
+  await createChat();
+  return;
+ }
+
+ if(activeChatId===id)activeChatId=chats[0].id;
+ renderChatList();
+ renderMessages();
+}
+
+function addMessage(role,text){
+ const el=document.createElement('div');
+ el.className='msg '+role;
+
+ const h=document.createElement('strong');
+ h.textContent=role==='user'?'YOU':'POISONY';
+
+ const content=document.createElement('div');
+ content.textContent=text||'';
+
+ el.append(h,content);
+ $('chat').append(el);
+ $('chat').scrollTop=$('chat').scrollHeight;
+
+ return {el,content};
+}
+
+/* API SETTINGS */
+
+function setBusy(v){
+ busy=v;
+ $('send').disabled=v;
+ $('test').disabled=v;
+ $('core').classList.toggle('busy',v);
+ $('status').textContent=v?'● PROCESSING':'● READY';
+}
+
+function configure(){
+ const p=presets[$('provider').value];
+ $('endpoint').value=p.endpoint;
+ $('model').value=p.model;
+ $('diag').textContent='Provider: '+$('provider').selectedOptions[0].textContent+' | Awaiting test';
+}
+
+$('provider').addEventListener('change',configure);
+
+try{
+ const cfg=JSON.parse(localStorage.getItem('poisony_api_cfg'));
+
+ if(cfg&&presets[cfg.provider]){
+  $('provider').value=cfg.provider;
+  $('endpoint').value=cfg.endpoint||presets[cfg.provider].endpoint;
+  $('model').value=cfg.model||presets[cfg.provider].model;
+  $('diag').textContent='Loaded saved settings ('+cfg.provider+')';
+ }else configure();
+}catch{configure();}
+
+$('save').onclick=()=>{
+ try{
+  localStorage.setItem('poisony_api_cfg',JSON.stringify({
+   provider:$('provider').value,
+   endpoint:$('endpoint').value.trim(),
+   model:$('model').value.trim()
+  }));
+  $('diag').textContent='Settings saved. API key is not stored.';
+ }catch{
+  $('diag').textContent='Could not save settings.';
+ }
+};
+
+function apiError(res,data){
+ return new Error(data?.error?.message||data?.message||'HTTP '+res.status);
+}
+
+async function fetchJson(url,headers,body){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),120000);
+
+ try{
+  const res=await fetch(url,{
+   method:'POST',
+   headers,
+   body:JSON.stringify(body),
+   signal:controller.signal
+  });
+
+  let data;
+  try{data=await res.json();}
+  catch{throw Error('Server returned non-JSON data (HTTP '+res.status+').');}
+
+  if(!res.ok)throw apiError(res,data);
+  return data;
+ }catch(e){
+  if(e.name==='AbortError')throw Error('Request timed out.');
+  if(e instanceof TypeError)throw Error('Network/CORS error. The provider may require a backend proxy.');
+  throw e;
+ }finally{
+  clearTimeout(timeout);
+ }
+}
+
+/* CHAT REQUEST */
+
+async function request(conversation){
+ const provider=$('provider').value;
+ const p=presets[provider];
+ const key=$('key').value.trim();
+ const model=$('model').value.trim();
+ const endpoint=$('endpoint').value.trim();
+
+ if(!model||!endpoint)throw Error('Model and endpoint are required.');
+ if(provider!=='ollama'&&!key)throw Error('Enter your API key.');
+ if(!/^https?:\/\//i.test(endpoint))throw Error('Endpoint must begin with http:// or https://');
+
+ let url=endpoint;
+ let headers={'Content-Type':'application/json'};
+ let body;
+
+ if(p.format==='openai'){
+  headers.Authorization='Bearer '+key;
+  body={
+   model,
+   messages:[
+    {role:'system',content:SYSTEM},
+    ...conversation.map(m=>({role:m.role,content:m.content}))
+   ],
+   max_tokens:2048
+  };
+ }else if(p.format==='gemini'){
+  url=endpoint.replace(/\/$/,'')+'/'+encodeURIComponent(model)+':generateContent';
+  headers['x-goog-api-key']=key;
+  body={
+   systemInstruction:{parts:[{text:SYSTEM}]},
+   contents:conversation.map(m=>({
+    role:m.role==='assistant'?'model':'user',
+    parts:[{text:m.content}]
+   })),
+   generationConfig:{maxOutputTokens:2048}
+  };
+ }else if(p.format==='anthropic'){
+  headers['x-api-key']=key;
+  headers['anthropic-version']='2023-06-01';
+  headers['anthropic-dangerous-direct-browser-access']='true';
+  body={
+   model,
+   system:SYSTEM,
+   messages:conversation.map(m=>({role:m.role,content:m.content})),
+   max_tokens:2048
+  };
+ }else{
+  body={
+   model,
+   stream:false,
+   messages:[
+    {role:'system',content:SYSTEM},
+    ...conversation.map(m=>({role:m.role,content:m.content}))
+   ]
+  };
+ }
+
+ const data=await fetchJson(url,headers,body);
+ let text='';
+
+ if(p.format==='openai')text=data.choices?.[0]?.message?.content;
+ else if(p.format==='gemini')text=data.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('\n');
+ else if(p.format==='anthropic')text=data.content?.filter(x=>x.type==='text').map(x=>x.text).join('\n');
+ else text=data.message?.content;
+
+ if(typeof text!=='string'||!text.trim()){
+  throw Error('Provider returned no text. Check model ID and response format.');
+ }
+
+ return text.trim();
+}
+
+/* SEND MESSAGE */
+
+async function send(){
+ const prompt=$('input').value.trim();
+ if(!prompt||busy)return;
+
+ $('input').value='';
+ const c=activeChat();
+ if(!c)return;
+
+ c.messages.push({role:'user',content:prompt});
+
+ if(c.title==='New conversation'){
+  c.title=prompt.slice(0,34)+(prompt.length>34?'…':'');
+ }
+
+ await persist();
+ addMessage('user',prompt);
+
+ const pending=addMessage('assistant','Processing…');
+ setBusy(true);
+
+ try{
+  const reply=await request(c.messages.map(m=>({
+   role:m.role,content:m.content
+  })));
+
+  pending.content.textContent=reply;
+  c.messages.push({role:'assistant',content:reply});
+  await persist();
+  speak(reply);
+ }catch(err){
+  pending.content.textContent='ERROR: '+err.message+'\nYou can retry your request.';
+  $('input').value=prompt;
+ }finally{
+  setBusy(false);
+ }
+}
+
+$('send').onclick=send;
+
+$('input').addEventListener('keydown',e=>{
+ if(e.key==='Enter'&&!e.shiftKey){
+  e.preventDefault();
+  send();
+ }
+});
+
+/* TEST CONNECTION */
+
+$('test').onclick=async()=>{
+ if(busy)return;
+ setBusy(true);
+
+ try{
+  const reply=await request([
+   {role:'user',content:'Reply briefly: POISONY SYSTEM ONLINE'}
+  ]);
+  addMessage('assistant','CONNECTION TEST SUCCESSFUL\n'+reply);
+  $('diag').textContent='Connected: '+$('provider').value+' / '+$('model').value;
+ }catch(e){
+  addMessage('assistant','CONNECTION TEST FAILED: '+e.message);
+  $('diag').textContent='Connection failed';
+ }finally{
+  setBusy(false);
+ }
+};
+
+/* CHAT CONTROLS */
+
+$('newChat').onclick=createChat;
+
+$('voice').onclick=()=>{
+ voiceOn=!voiceOn;
+ $('voice').textContent='VOICE: '+(voiceOn?'ON':'OFF');
+ if(!voiceOn&&'speechSynthesis'in window)speechSynthesis.cancel();
+};
+
+$('stop').onclick=()=>{
+ if('speechSynthesis'in window)speechSynthesis.cancel();
+};
+
+function speak(text){
+ if(!voiceOn||!('speechSynthesis'in window))return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.pitch=.9;
+ speechSynthesis.speak(u);
+}
+
+$('export').onclick=()=>{
+ const c=activeChat();
+ const blob=new Blob(
+  [JSON.stringify(c?.messages||[],null,2)],
+  {type:'application/json'}
+ );
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');
+ a.href=url;
+ a.download='Poisony_Conversation.json';
+ a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+
+/* EMAIL AUTHENTICATION */
+
+function setAuthMode(mode){
+ authMode=mode;
+ const signup=mode==='signup';
+
+ $('authHeading').textContent=signup
+  ?'CREATE YOUR POISONY ACCOUNT'
+  :'SIGN IN TO YOUR POISONY ACCOUNT';
+
+ $('authSubmit').textContent=signup?'CREATE ACCOUNT':'SIGN IN';
+
+ $('authToggle').textContent=signup
+  ?'Already have an account? SIGN IN'
+  :'Need an account? SIGN UP';
+
+ $('loginPass').autocomplete=signup?'new-password':'current-password';
+ $('loginError').textContent='';
+ $('loginEmail').value='';
+ $('loginPass').value='';
+}
+
+$('authToggle').onclick=()=>{
+ if(loginLocked)return;
+ setAuthMode(authMode==='signin'?'signup':'signin');
+};
+
+/* 30-SECOND WRONG PASSWORD LOCKOUT */
+
+function startLoginLock(){
+ loginLocked=true;
+ let remaining=30;
+
+ $('loginForm').classList.add('hidden');
+ $('authToggle').classList.add('hidden');
+ $('loginError').textContent='ACCESS DENIED. PLEASE WAIT '+remaining+' SECONDS.';
+
+ loginLockTimer=setInterval(()=>{
+  remaining--;
+
+  if(remaining>0){
+   $('loginError').textContent='ACCESS DENIED. PLEASE WAIT '+remaining+' SECONDS.';
+  }else{
+   clearInterval(loginLockTimer);
+   loginLockTimer=null;
+   loginLocked=false;
+   $('loginForm').classList.remove('hidden');
+   $('authToggle').classList.remove('hidden');
+   $('loginError').textContent='You can try signing in again.';
+   $('loginPass').value='';
+  }
+ },1000);
+}
+
+$('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(loginLocked)return;
+
+ $('authSubmit').disabled=true;
+ $('loginError').textContent='Connecting securely…';
+
+ try{
+  const email=$('loginEmail').value.trim().toLowerCase();
+  const password=$('loginPass').value;
+
+  if(!email)throw Error('Enter your email address.');
+
+  if(authMode==='signup'){
+   if(password.length<8)throw Error('Password must be at least 8 characters.');
+
+   const {data,error}=await db.auth.signUp({
+    email,
+    password
+   });
+
+   if(error)throw error;
+
+   if(data.session){
+    currentUser=data.user;
+    await enterAccount();
+   }else{
+    $('loginError').textContent='Account created! Check your email for a confirmation link, then sign in.';
+   }
+
+  }else{
+   const {data,error}=await db.auth.signInWithPassword({
+    email,
+    password
+   });
+
+   if(error){
+    startLoginLock();
+    throw Error('Incorrect email or password.');
+   }
+
+   currentUser=data.user;
+   await enterAccount();
+  }
+
+ }catch(err){
+  if(!loginLocked){
+   $('loginError').textContent=err.message||'Authentication failed. Please try again.';
+  }
+ }finally{
+  $('authSubmit').disabled=false;
+ }
+});
+
+async function enterAccount(){
+ $('loginScreen').classList.add('hidden');
+ $('loginError').textContent='';
+ $('loginPass').value='';
+
+ $('diag').textContent='Signed in | Loading cloud chats…';
+
+ try{
+  await loadChats();
+  $('diag').textContent='Cloud account: '+currentUser.email+' | Chats synced';
+ }catch(err){
+  $('diag').textContent='Could not load cloud chats: '+err.message;
+ }
+}
+
+async function leaveAccount(){
+ await db.auth.signOut();
+
+ currentUser=null;
+ chats=[];
+ activeChatId=null;
+
+ $('chatList').replaceChildren();
+ $('chat').replaceChildren();
+ $('loginScreen').classList.remove('hidden');
+ $('loginEmail').value='';
+ $('loginPass').value='';
+
+ setAuthMode('signin');
+}
+
+$('logout').onclick=leaveAccount;
+
+async function initializeAuth(){
+ const {data:{session},error}=await db.auth.getSession();
+
+ if(error){
+  $('loginError').textContent=error.message;
+  return;
+ }
+
+ if(session){
+  currentUser=session.user;
+  await enterAccount();
+ }
+
+ db.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_OUT'){
+   currentUser=null;
+   chats=[];
+   activeChatId=null;
+   $('loginScreen').classList.remove('hidden');
+  }
+ });
+}
+
+/* MICROPHONE INPUT */
+
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+
+if(Recognition){
+ const rec=new Recognition();
+ rec.lang='en-US';
+
+ rec.onresult=e=>{
+  $('input').value=e.results[0][0].transcript;
+ };
+
+ rec.onerror=e=>{
+  $('status').textContent='● MICROPHONE: '+e.error;
+ };
+
+ $('mic').onclick=()=>{
+  try{rec.start()}catch{}
+ };
+}else{
+ $('mic').disabled=true;
+ $('mic').title='Speech recognition unavailable in this browser';
+}
+
+/* START APP */
+
+initializeAuth();
+
+</script>
+</body>
+</html>
